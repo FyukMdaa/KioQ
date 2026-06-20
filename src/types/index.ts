@@ -68,3 +68,21 @@ export interface SyncData {
 
 /** コンフリクト解決方法 */
 export type ConflictResolution = "cloud" | "local" | "newest";
+
+/** FSRSグローバル設定 */
+export interface FsrsSettings {
+  request_retention: number;      // 目標保持率 (0.7–0.99, default: 0.9)
+  maximum_interval: number;       // 最大間隔日数 (default: 36500)
+  w: number[];                    // FSRSウェイト（空配列=デフォルト）
+  new_cards_per_day: number;      // 1日の新規カード上限 (default: 50)
+  reviews_per_day: number;        // 1日の復習上限 (default: 500)
+  review_order: "due_date" | "random" | "difficulty"; // 復習順
+}
+
+/** カスタム学習設定 */
+export interface CustomStudyConfig {
+  deckId: string;
+  rangeValues?: string[];         // 範囲列でフィルタ
+  idRange?: { from: string; to: string }; // ID範囲
+  ignoreNewCardLimit: boolean;    // 新規カード上限を無視
+}

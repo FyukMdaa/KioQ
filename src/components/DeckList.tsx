@@ -18,20 +18,13 @@ import {
   CardFooter,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { db, getAllDecks, deleteDeck, getCardsByDeck } from "@/db";
 import { getDeckStats } from "@/fsrs";
 import { formatDate, calculateProgress } from "@/lib/utils";
 import type { Deck } from "@/types";
 
 interface DeckWithStats extends Deck {
-  stats: {
-    total: number;
-    newCount: number;
-    learningCount: number;
-    reviewCount: number;
-    relearningCount: number;
-  };
+  stats: ReturnType<typeof getDeckStats>;
 }
 
 export function DeckList() {
@@ -110,10 +103,7 @@ export function DeckList() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {decks.map((deck) => {
           const progress = calculateProgress(deck.stats);
-          const reviewCount =
-            deck.stats.learningCount +
-            deck.stats.reviewCount +
-            deck.stats.relearningCount;
+          const canStudy = deck.stats.dueCount > 0 || deck.stats.newCount > 0 || deck.stats.learningCount > 0;
 
           return (
             <Card key={deck.id} className="flex flex-col">
@@ -149,17 +139,14 @@ export function DeckList() {
                   </div>
                 </div>
 
-                {/* 統計バッジ */}
-                <div className="flex flex-wrap gap-1.5">
-                  <Badge variant="secondary">
-                    新規: {deck.stats.newCount}
-                  </Badge>
-                  <Badge variant="default">
-                    復習: {reviewCount}
-                  </Badge>
-                  <Badge variant="outline">
-                    合計: {deck.stats.total}
-                  </Badge>
+                {/* Ankiスタイル枚数 */}
+                <div className="flex gap-2 text-sm">
+                  <span className="font-bold text-blue-500">{deck.stats.newCount}</span>
+                  <span className="text-muted-foreground text-xs self-end mb-0.5">新規</span>
+                  <span className="font-bold text-orange-500 ml-1">{deck.stats.learningCount + deck.stats.relearningCount}</span>
+                  <span className="text-muted-foreground text-xs self-end mb-0.5">学習</span>
+                  <span className="font-bold text-green-500 ml-1">{deck.stats.reviewCount}</span>
+                  <span className="text-muted-foreground text-xs self-end mb-0.5">復習</span>
                 </div>
               </CardContent>
 
@@ -171,7 +158,7 @@ export function DeckList() {
                   </Button>
                 </Link>
                 <Link to={`/study/${deck.id}`} className="flex-1">
-                  <Button className="w-full gap-2">
+                  <Button className="w-full gap-2" disabled={!canStudy}>
                     <Play className="h-4 w-4" />
                     学習
                   </Button>

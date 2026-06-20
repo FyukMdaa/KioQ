@@ -1,7 +1,6 @@
 // ============================================================
 // KioQ FSRSエンジンラッパー
 // ts-fsrs を用いた間隔反復スケジューリング
-// ※ モジュールレベルでの初期化を避け、遅延初期化にする
 // ============================================================
 import {
   createEmptyCard,
@@ -13,14 +12,24 @@ import {
   State,
   Rating,
 } from "ts-fsrs";
-import type { Card, FsrsState, Rating as AppRating } from "@/types";
+import type { Card, FsrsState, Rating as AppRating, FsrsSettings } from "@/types";
 
 let engineInstance: ReturnType<typeof fsrs> | null = null;
+let lastSettings: string = "";
 
-function getEngine() {
-  if (!engineInstance) {
-    const params = generatorParameters({ request_retention: 0.9 });
+export function getEngine(settings?: Partial<FsrsSettings>) {
+  const key = JSON.stringify(settings ?? {});
+  if (!engineInstance || key !== lastSettings) {
+    const wParam = settings?.w;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const extraParams: any = wParam && wParam.length > 0 ? { w: wParam } : {};
+    const params = generatorParameters({
+      request_retention: settings?.request_retention ?? 0.9,
+      maximum_interval: settings?.maximum_interval ?? 36500,
+      ...extraParams,
+    });
     engineInstance = fsrs(params);
+    lastSettings = key;
   }
   return engineInstance;
 }
@@ -94,13 +103,14 @@ function toFsrsCard(card: Card): FsrsCard {
  */
 export function reviewCard(
   card: Card,
-  rating: AppRating
+  rating: AppRating,
+  settings?: Partial<FsrsSettings>
 ): { fsrs: FsrsState; scheduledDays: number; nextReview: number } {
   const fsrsCard = toFsrsCard(card);
   const grade = toGrade(rating);
   const now = new Date();
 
-  const scheduling = getEngine().repeat(fsrsCard, now);
+  const scheduling = getEngine(settings).repeat(fsrsCard, now);
   const recordLog: RecordLogItem = scheduling[grade];
 
   const newFsrsState = toFsrsState(recordLog.card);
@@ -116,11 +126,12 @@ export function reviewCard(
  * レビュー時に各ボタンの予測インターバルを取得
  */
 export function getPreviewIntervals(
-  card: Card
+  card: Card,
+  settings?: Partial<FsrsSettings>
 ): Record<AppRating, { interval: number; label: string }> {
   const fsrsCard = toFsrsCard(card);
   const now = new Date();
-  const scheduling = getEngine().repeat(fsrsCard, now);
+  const scheduling = getEngine(settings).repeat(fsrsCard, now);
 
   const ratings: AppRating[] = ["Again", "Hard", "Good", "Easy"];
   const grades: Grade[] = [
@@ -130,7 +141,7 @@ export function getPreviewIntervals(
     Rating.Easy,
   ];
 
-  const result: Record<AppRating, { interval: number; label: string }> = {} as any;
+  const result: Record<AppRating, { interval: number; label: string }> = {} as never;
 
   ratings.forEach((r, i) => {
     const log: RecordLogItem = scheduling[grades[i]];
@@ -155,7 +166,7 @@ function formatIntervalLabel(days: number): string {
 }
 
 /**
- * デッキの統計情報を計算（FSRSエンジン不要）
+ * デッキの統計情報を計算
  */
 export function getDeckStats(cards: Card[]): {
   total: number;
@@ -163,12 +174,19 @@ export function getDeckStats(cards: Card[]): {
   learningCount: number;
   reviewCount: number;
   relearningCount: number;
+  dueCount: number;
 } {
+  const now = Date.now();
   return {
     total: cards.length,
     newCount: cards.filter((c) => c.fsrs.state === "New").length,
     learningCount: cards.filter((c) => c.fsrs.state === "Learning").length,
-    reviewCount: cards.filter((c) => c.fsrs.state === "Review").length,
+    reviewCount: cards.filter(
+      (c) => c.fsrs.state === "Review" && c.fsrs.due !== undefined && c.fsrs.due <= now
+    ).length,
     relearningCount: cards.filter((c) => c.fsrs.state === "Relearning").length,
+    dueCount: cards.filter(
+      (c) => c.fsrs.state !== "New" && c.fsrs.due !== undefined && c.fsrs.due <= now
+    ).length,
   };
 }

@@ -3,6 +3,7 @@
 // ============================================================
 import { SyncPanel } from "@/components/SyncStatus";
 import { ExportDialog } from "@/components/ExportDialog";
+import { FsrsSettingsPanel } from "@/components/FsrsSettingsPanel";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { clearDatabase } from "@/db";
@@ -18,6 +19,9 @@ export function SettingsPage() {
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <h1 className="text-2xl font-bold">設定</h1>
+
+      {/* FSRS詳細設定 */}
+      <FsrsSettingsPanel />
 
       {/* Google Drive同期 */}
       <SyncPanel />

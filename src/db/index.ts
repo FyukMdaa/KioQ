@@ -115,3 +115,36 @@ export async function clearDatabase(): Promise<void> {
     await db.cards.clear();
   });
 }
+
+// ---- FSRS設定 ----
+const FSRS_SETTINGS_KEY = "fsrs_settings";
+
+export const DEFAULT_FSRS_SETTINGS: import("@/types").FsrsSettings = {
+  request_retention: 0.9,
+  maximum_interval: 36500,
+  w: [],
+  new_cards_per_day: 50,
+  reviews_per_day: 500,
+  review_order: "due_date",
+};
+
+export async function getFsrsSettings(): Promise<import("@/types").FsrsSettings> {
+  try {
+    const raw = localStorage.getItem(FSRS_SETTINGS_KEY);
+    if (!raw) return { ...DEFAULT_FSRS_SETTINGS };
+    return { ...DEFAULT_FSRS_SETTINGS, ...JSON.parse(raw) };
+  } catch {
+    return { ...DEFAULT_FSRS_SETTINGS };
+  }
+}
+
+export async function saveFsrsSettings(settings: import("@/types").FsrsSettings): Promise<void> {
+  localStorage.setItem(FSRS_SETTINGS_KEY, JSON.stringify(settings));
+}
+
+/** デッキ名を更新 */
+export async function renameDeck(deckId: string, newName: string): Promise<void> {
+  const deck = await db.decks.get(deckId);
+  if (!deck) return;
+  await db.decks.put({ ...deck, name: newName, updatedAt: Date.now() });
+}
