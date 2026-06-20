@@ -40,6 +40,7 @@ export function DeckList() {
 
   const loadDecks = async () => {
     try {
+      await db.open();
       const allDecks = await getAllDecks();
       const decksWithStats = await Promise.all(
         allDecks.map(async (deck) => {
