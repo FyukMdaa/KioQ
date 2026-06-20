@@ -2,6 +2,40 @@
 // KioQ Google Drive 同期機能
 // drive.appdata スコープを使用した安全な同期
 // ============================================================
+
+// グローバル型宣言（Google API Client / Google Identity Services）
+declare const gapi: {
+  load: (api: string, callback: () => void) => void;
+  client: {
+    init: (config: { discoveryDocs: string[] }) => Promise<void>;
+    getToken: () => { access_token: string } | null;
+    setToken: (token: { access_token: string } | null) => void;
+    drive: {
+      files: {
+        list: (params: Record<string, string>) => Promise<{ result: { files: { id: string; modifiedTime: string }[] } }>;
+        get: (params: Record<string, string>) => Promise<{ result: Record<string, unknown> }>;
+      };
+    };
+  };
+};
+
+declare namespace google {
+  namespace accounts {
+    namespace oauth2 {
+      interface TokenClient {
+        callback: (response: { error?: string; access_token?: string }) => void;
+        requestAccessToken: (config: { prompt: string }) => void;
+      }
+      function initTokenClient(config: {
+        client_id: string;
+        scope: string;
+        callback: (response: { error?: string }) => void;
+      }): TokenClient;
+      function revoke(accessToken: string): void;
+    }
+  }
+}
+
 import type { SyncData, ConflictResolution, SyncStatus } from "@/types";
 import { exportAllData, importAllData } from "@/db";
 
