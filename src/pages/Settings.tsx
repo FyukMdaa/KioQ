@@ -1,7 +1,6 @@
 // ============================================================
 // 設定ページ
 // ============================================================
-import React from "react";
 import { SyncPanel } from "@/components/SyncStatus";
 import { ExportDialog } from "@/components/ExportDialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";

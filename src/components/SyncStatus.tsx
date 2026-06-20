@@ -2,7 +2,7 @@
 // 同期ステータスコンポーネント
 // Google Drive同期のUI
 // ============================================================
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   Cloud,
   CloudOff,
@@ -32,7 +32,6 @@ import {
   sync,
   syncUpstream,
   syncDownstream,
-  isAuthenticated,
   authenticate,
   signOut,
 } from "@/lib/google-drive";

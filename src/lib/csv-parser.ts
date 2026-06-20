@@ -91,7 +91,7 @@ export async function parseCSV(
         const rows = results.data as Record<string, string>[];
         resolve({ columns, rows, rowCount: rows.length });
       },
-      error: (error) => {
+      error: (error: { message: string }) => {
         reject(new Error(`CSVパースエラー: ${error.message}`));
       },
     });

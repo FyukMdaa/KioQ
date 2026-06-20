@@ -2,7 +2,7 @@
 // エクスポートダイアログコンポーネント
 // JSON（FSRSステータス付き）またはCSV（純粋データ）エクスポート
 // ============================================================
-import React, { useState } from "react";
+import { useState } from "react";
 import { Download, FileJson, FileSpreadsheet } from "lucide-react";
 import {
   Card,
@@ -13,7 +13,6 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { exportAllData, getCardsByDeck } from "@/db";
-import { getAllDecks } from "@/db";
 import type { Deck } from "@/types";
 
 interface ExportDialogProps {

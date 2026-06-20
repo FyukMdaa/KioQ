@@ -2,7 +2,7 @@
 // 学習ページ
 // レビューキューからカードを出題
 // ============================================================
-import React, { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
 import {
   ArrowLeft,
@@ -11,8 +11,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StudyCard } from "@/components/StudyCard";
-import { getDeckById, getReviewCards, getCardsByDeck } from "@/db";
-import { getDeckStats } from "@/fsrs";
+import { getDeckById, getReviewCards } from "@/db";
 import type { Card, Deck } from "@/types";
 
 export function StudyPage() {
@@ -22,13 +21,6 @@ export function StudyPage() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [completed, setCompleted] = useState(false);
-  const [totalStats, setTotalStats] = useState({
-    total: 0,
-    newCount: 0,
-    learningCount: 0,
-    reviewCount: 0,
-    relearningCount: 0,
-  });
 
   const loadReviewQueue = useCallback(async () => {
     if (!deckId) return;
@@ -36,9 +28,6 @@ export function StudyPage() {
       const d = await getDeckById(deckId);
       if (!d) return;
       setDeck(d);
-
-      const allCards = await getCardsByDeck(d.id);
-      setTotalStats(getDeckStats(allCards));
 
       const reviewCards = await getReviewCards(d.id);
       setReviewQueue(reviewCards);

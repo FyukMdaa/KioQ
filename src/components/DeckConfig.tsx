@@ -2,7 +2,7 @@
 // デッキ設定コンポーネント
 // 表面/裏面の列選択、フィルター設定
 // ============================================================
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   Card,
   CardContent,
@@ -13,8 +13,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { upsertDeck, getCardsByDeck } from "@/db";
-import type { Deck, DeckFilter } from "@/types";
+import { upsertDeck } from "@/db";
+import type { Deck } from "@/types";
 
 interface DeckConfigProps {
   deck: Deck;

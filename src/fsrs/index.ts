@@ -7,9 +7,8 @@ import {
   fsrs,
   generatorParameters,
   type Card as FsrsCard,
-  type Rating as FsrsRating,
   type Grade,
-  type RecordLog,
+  type RecordLogItem,
   State,
   Rating,
 } from "ts-fsrs";
@@ -40,7 +39,7 @@ function toFsrsState(card: FsrsCard): FsrsState {
   return {
     stability: card.stability,
     difficulty: card.difficulty,
-    interval: card.interval,
+    interval: card.scheduled_days,
     repeats: card.reps,
     lapses: card.lapses,
     state: stateMap[card.state],
@@ -97,7 +96,7 @@ export function reviewCard(
   const now = new Date();
 
   const scheduling = engine.repeat(fsrsCard, now);
-  const recordLog: RecordLog = scheduling[grade];
+  const recordLog: RecordLogItem = scheduling[grade];
 
   const newFsrsState = toFsrsState(recordLog.card);
 
@@ -131,7 +130,7 @@ export function getPreviewIntervals(
   const result: Record<AppRating, { interval: number; label: string }> = {} as any;
 
   ratings.forEach((r, i) => {
-    const log = scheduling[grades[i]];
+    const log: RecordLogItem = scheduling[grades[i]];
     const days = log.card.scheduled_days;
     result[r] = {
       interval: days,

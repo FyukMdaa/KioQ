@@ -1,15 +1,13 @@
 // ============================================================
 // デッキ一覧コンポーネント
 // ============================================================
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
   BookOpen,
   Plus,
   Trash2,
   Play,
-  Download,
-  Upload,
 } from "lucide-react";
 import {
   Card,

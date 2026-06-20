@@ -2,11 +2,10 @@
 // 学習カードコンポーネント
 // 表面→裏面→評価ボタンのフロー
 // ============================================================
-import React, { useState, useCallback } from "react";
+import { useState, useCallback } from "react";
 import {
   Eye,
   RotateCcw,
-  ChevronRight,
   Clock,
 } from "lucide-react";
 import {

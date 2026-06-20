@@ -80,7 +80,7 @@ export async function authenticate(
       return;
     }
 
-    tokenClient.callback = (resp) => {
+    tokenClient.callback = (resp: { error?: string }) => {
       if (resp.error) {
         reject(new Error(resp.error));
         return;
@@ -136,7 +136,7 @@ async function getSyncFileMetadata(): Promise<{
       fileId,
       fields: "id, modifiedTime",
     });
-    return response.result;
+    return response.result as { id: string; modifiedTime: string };
   } catch {
     return null;
   }
@@ -209,7 +209,7 @@ async function downloadFromDrive(): Promise<SyncData | null> {
       fileId,
       alt: "media",
     });
-    return response.result as SyncData;
+    return response.result as unknown as SyncData;
   } catch {
     return null;
   }
