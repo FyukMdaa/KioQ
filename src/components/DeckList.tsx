@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { getAllDecks, deleteDeck, getCardsByDeck } from "@/db";
+import { db, getAllDecks, deleteDeck, getCardsByDeck } from "@/db";
 import { getDeckStats } from "@/fsrs";
 import { formatDate, calculateProgress } from "@/lib/utils";
 import type { Deck } from "@/types";
