@@ -1,6 +1,7 @@
 // ============================================================
 // KioQ FSRSエンジンラッパー
 // ts-fsrs を用いた間隔反復スケジューリング
+// ※ モジュールレベルでの初期化を避け、遅延初期化にする
 // ============================================================
 import {
   createEmptyCard,
@@ -14,8 +15,15 @@ import {
 } from "ts-fsrs";
 import type { Card, FsrsState, Rating as AppRating } from "@/types";
 
-const params = generatorParameters({ request_retention: 0.9 });
-const engine = fsrs(params);
+let engineInstance: ReturnType<typeof fsrs> | null = null;
+
+function getEngine() {
+  if (!engineInstance) {
+    const params = generatorParameters({ request_retention: 0.9 });
+    engineInstance = fsrs(params);
+  }
+  return engineInstance;
+}
 
 /** アプリのRating → ts-fsrs Grade 変換 */
 function toGrade(rating: AppRating): Grade {
@@ -83,9 +91,6 @@ function toFsrsCard(card: Card): FsrsCard {
 
 /**
  * レビューを実行し、次回スケジュールを計算
- * @param card 対象カード
- * @param rating ユーザーの評価
- * @returns 更新後のFsrsStateとスケジュール情報
  */
 export function reviewCard(
   card: Card,
@@ -95,7 +100,7 @@ export function reviewCard(
   const grade = toGrade(rating);
   const now = new Date();
 
-  const scheduling = engine.repeat(fsrsCard, now);
+  const scheduling = getEngine().repeat(fsrsCard, now);
   const recordLog: RecordLogItem = scheduling[grade];
 
   const newFsrsState = toFsrsState(recordLog.card);
@@ -109,15 +114,13 @@ export function reviewCard(
 
 /**
  * レビュー時に各ボタンの予測インターバルを取得
- * @param card 対象カード
- * @returns 各Ratingに対応する予測インターバル情報
  */
 export function getPreviewIntervals(
   card: Card
 ): Record<AppRating, { interval: number; label: string }> {
   const fsrsCard = toFsrsCard(card);
   const now = new Date();
-  const scheduling = engine.repeat(fsrsCard, now);
+  const scheduling = getEngine().repeat(fsrsCard, now);
 
   const ratings: AppRating[] = ["Again", "Hard", "Good", "Easy"];
   const grades: Grade[] = [
@@ -152,7 +155,7 @@ function formatIntervalLabel(days: number): string {
 }
 
 /**
- * デッキの統計情報を計算
+ * デッキの統計情報を計算（FSRSエンジン不要）
  */
 export function getDeckStats(cards: Card[]): {
   total: number;

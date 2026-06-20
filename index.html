@@ -2,13 +2,41 @@
 <html lang="ja">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/icons/icon-192.png" />
+    <link rel="icon" type="image/svg+xml" href="/icons/icon-192.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#6366f1" />
     <title>KioQ - 反復学習アプリ</title>
+    <style>
+      /* Reactロード前のローディング表示 */
+      #boot-loader {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        background: #0f172a;
+        color: #94a3b8;
+        font-family: system-ui, sans-serif;
+        flex-direction: column;
+        gap: 1rem;
+      }
+      #boot-loader .spinner {
+        width: 2rem;
+        height: 2rem;
+        border: 3px solid #334155;
+        border-top-color: #6366f1;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+      }
+      @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
   </head>
   <body class="dark">
-    <div id="root"></div>
+    <div id="root">
+      <div id="boot-loader">
+        <div class="spinner"></div>
+        <span>KioQ を読み込み中...</span>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
