@@ -98,7 +98,3 @@ kioq/
 | rowId | String | 行識別子 |
 | data | Object | CSVの1行データ |
 | fsrs | Object | FSRSパラメータ |
-
-## ライセンス
-
-MIT
