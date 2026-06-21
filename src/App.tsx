@@ -9,6 +9,7 @@ import { DeckDetailPage } from "@/pages/DeckDetail";
 import { StudyPage } from "@/pages/Study";
 import { SettingsPage } from "@/pages/Settings";
 import { ImportPage } from "@/pages/Import";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 interface ErrorBoundaryState {
   hasError: boolean;
@@ -57,17 +58,19 @@ class ErrorBoundary extends Component<{ children: ReactNode }, ErrorBoundaryStat
 export default function App() {
   return (
     <ErrorBoundary>
-      <BrowserRouter>
-        <Layout>
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/import" element={<ImportPage />} />
-            <Route path="/deck/:deckId" element={<DeckDetailPage />} />
-            <Route path="/study/:deckId" element={<StudyPage />} />
-            <Route path="/settings" element={<SettingsPage />} />
-          </Routes>
-        </Layout>
-      </BrowserRouter>
+      <TooltipProvider>
+        <BrowserRouter>
+          <Layout>
+            <Routes>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/import" element={<ImportPage />} />
+              <Route path="/deck/:deckId" element={<DeckDetailPage />} />
+              <Route path="/study/:deckId" element={<StudyPage />} />
+              <Route path="/settings" element={<SettingsPage />} />
+            </Routes>
+          </Layout>
+        </BrowserRouter>
+      </TooltipProvider>
     </ErrorBoundary>
   );
 }

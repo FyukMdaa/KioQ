@@ -13,6 +13,7 @@ import {
   Pencil,
   Check,
   X,
+  Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -20,6 +21,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DeckConfig } from "@/components/DeckConfig";
 import { ExportDialog } from "@/components/ExportDialog";
 import { CsvViewer } from "@/components/CsvViewer";
+import { CustomStudyDialog } from "@/components/CustomStudyDialog";
 import { getDeckById, getCardsByDeck, renameDeck } from "@/db";
 import { getDeckStats } from "@/fsrs";
 import { formatDate, calculateProgress } from "@/lib/utils";
@@ -39,6 +41,7 @@ export function DeckDetailPage() {
   const [activeTab, setActiveTab] = useState<"stats" | "csv" | "config" | "export">("stats");
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState("");
+  const [customStudyOpen, setCustomStudyOpen] = useState(false);
 
   const loadData = async () => {
     if (!deckId) return;
@@ -117,12 +120,23 @@ export function DeckDetailPage() {
             最終更新: {formatDate(deck.updatedAt)}
           </p>
         </div>
-        <Link to={`/study/${deck.id}`}>
-          <Button className="gap-2 shrink-0" disabled={!canStudy}>
-            <Play className="h-4 w-4" />
-            学習
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            size="icon" 
+            className="shrink-0" 
+            title="カスタム学習"
+            onClick={() => setCustomStudyOpen(true)}
+          >
+            <Zap className="h-4 w-4 text-amber-500" />
           </Button>
-        </Link>
+          <Link to={`/study/${deck.id}`}>
+            <Button className="gap-2 shrink-0" disabled={!canStudy}>
+              <Play className="h-4 w-4" />
+              学習
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Ankiスタイル枚数バッジ */}
@@ -236,6 +250,13 @@ export function DeckDetailPage() {
       )}
 
       {activeTab === "export" && <ExportDialog deck={deck} />}
+
+      {/* カスタム学習ダイアログ */}
+      <CustomStudyDialog
+        deck={deck}
+        open={customStudyOpen}
+        onOpenChange={setCustomStudyOpen}
+      />
     </div>
   );
 }

@@ -17,9 +17,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { reviewCard, getPreviewIntervals } from "@/fsrs";
-import { upsertCard } from "@/db";
+import { upsertCard, getFsrsSettings } from "@/db";
 import { cn } from "@/lib/utils";
-import type { Card as AppCard, Rating } from "@/types";
+import type { Card as AppCard, Rating, FsrsSettings } from "@/types";
 
 interface StudyCardProps {
   card: AppCard;
@@ -33,22 +33,22 @@ const ratingConfig: Record<
   { label: string; color: string; className: string }
 > = {
   Again: {
-    label: "Again",
+    label: "忘れた",
     color: "bg-red-500 hover:bg-red-600",
     className: "text-white",
   },
   Hard: {
-    label: "Hard",
+    label: "難しい",
     color: "bg-orange-500 hover:bg-orange-600",
     className: "text-white",
   },
   Good: {
-    label: "Good",
+    label: "普通",
     color: "bg-green-500 hover:bg-green-600",
     className: "text-white",
   },
   Easy: {
-    label: "Easy",
+    label: "簡単",
     color: "bg-blue-500 hover:bg-blue-600",
     className: "text-white",
   },
@@ -65,6 +65,12 @@ export function StudyCard({
   const [previewIntervals, setPreviewIntervals] = useState<
     Record<Rating, { interval: number; label: string }> | null
   >(null);
+  const [settings, setSettings] = useState<FsrsSettings | undefined>();
+
+  // 設定の読み込み
+  useEffect(() => {
+    getFsrsSettings().then(setSettings);
+  }, []);
 
   // カードが切り替わったらリセット
   useEffect(() => {
@@ -75,16 +81,16 @@ export function StudyCard({
 
   const handleFlip = useCallback(() => {
     setIsFlipped(true);
-    const intervals = getPreviewIntervals(card);
+    const intervals = getPreviewIntervals(card, settings);
     setPreviewIntervals(intervals);
-  }, [card]);
+  }, [card, settings]);
 
   const handleRate = useCallback(
     async (rating: Rating) => {
       if (isTransitioning) return;
       setIsTransitioning(true);
 
-      const result = reviewCard(card, rating);
+      const result = reviewCard(card, rating, settings);
       await upsertCard({
         ...card,
         fsrs: result.fsrs,
@@ -98,7 +104,7 @@ export function StudyCard({
         onComplete();
       }, 300);
     },
-    [card, onComplete, isTransitioning]
+    [card, onComplete, isTransitioning, settings]
   );
 
   return (
@@ -111,7 +117,7 @@ export function StudyCard({
       >
         {/* 表面 */}
         {!isFlipped && (
-          <Card className="flex flex-col min-h-[70vh]">
+          <Card className="flex flex-col min-h-[60vh]">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <Badge variant="secondary" className="text-xs">
@@ -132,7 +138,7 @@ export function StudyCard({
                     <span className="text-xs text-muted-foreground">
                       {col}
                     </span>
-                    <p className="text-2xl font-bold">
+                    <p className="text-2xl font-bold whitespace-pre-wrap">
                       {card.data[col] ?? ""}
                     </p>
                   </div>
@@ -143,7 +149,7 @@ export function StudyCard({
             <CardFooter className="justify-center">
               <Button
                 onClick={handleFlip}
-                className="gap-2"
+                className="gap-2 w-full h-12"
                 size="lg"
               >
                 <Eye className="h-4 w-4" />
@@ -155,7 +161,7 @@ export function StudyCard({
 
         {/* 裏面 */}
         {isFlipped && (
-          <Card className="flex flex-col min-h-[70vh]">
+          <Card className="flex flex-col min-h-[60vh]">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <Badge variant="default" className="text-xs">
@@ -176,7 +182,7 @@ export function StudyCard({
               </div>
             </CardHeader>
 
-            <CardContent className="flex-1 space-y-4 py-4">
+            <CardContent className="flex-1 space-y-4 py-4 overflow-y-auto">
               {/* 表面の再表示 */}
               <div className="rounded-md bg-muted/50 p-3">
                 {frontColumns.map((col) => (
@@ -194,7 +200,7 @@ export function StudyCard({
                     <span className="text-xs text-muted-foreground">
                       {col}
                     </span>
-                    <p className="text-lg font-semibold">
+                    <p className="text-lg font-semibold whitespace-pre-wrap">
                       {card.data[col] ?? ""}
                     </p>
                   </div>
@@ -213,13 +219,13 @@ export function StudyCard({
                       onClick={() => handleRate(rating)}
                       disabled={isTransitioning}
                       className={cn(
-                        "flex flex-col gap-0.5 h-auto py-2",
+                        "flex flex-col gap-0.5 h-auto py-2 px-1",
                         config.color,
                         config.className
                       )}
                       size="sm"
                     >
-                      <span className="font-semibold">{config.label}</span>
+                      <span className="font-semibold text-xs">{config.label}</span>
                       {preview && (
                         <span className="text-[10px] opacity-80 flex items-center gap-0.5">
                           <Clock className="h-2.5 w-2.5" />

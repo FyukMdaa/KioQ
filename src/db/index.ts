@@ -2,7 +2,7 @@
 // KioQ Dexie.js データベース定義
 // ============================================================
 import Dexie, { type EntityTable } from "dexie";
-import type { Deck, Card } from "@/types";
+import type { Deck, Card, FsrsSettings, CustomStudyConfig } from "@/types";
 
 class KioQDatabase extends Dexie {
   decks!: EntityTable<Deck, "id">;
@@ -50,27 +50,80 @@ export async function getCardsByDeck(deckId: string): Promise<Card[]> {
   return db.cards.where("deckId").equals(deckId).toArray();
 }
 
-/** レビュー待ちカード取得（due が現在時刻以前、または New のカード） */
+/** 
+ * レビュー待ちカード取得
+ * FSRS設定（1日の上限など）やカスタム学習設定を反映
+ */
 export async function getReviewCards(
   deckId: string,
-  filters?: { column: string; values: string[] }[]
+  options?: {
+    settings?: FsrsSettings;
+    customStudy?: CustomStudyConfig;
+  }
 ): Promise<Card[]> {
   const now = Date.now();
+  const settings = options?.settings ?? await getFsrsSettings();
+  const custom = options?.customStudy;
+  
   let cards = await db.cards.where("deckId").equals(deckId).toArray();
 
-  // フィルター適用
-  if (filters && filters.length > 0) {
-    cards = cards.filter((card) =>
-      filters.every((f) => f.values.includes(card.data[f.column] ?? ""))
-    );
+  // 1. 範囲フィルタリング（カスタム学習用）
+  if (custom) {
+    const deck = await getDeckById(deckId);
+    if (deck) {
+      // 範囲列によるフィルタ
+      if (custom.rangeValues && custom.rangeValues.length > 0 && deck.config.rangeColumn) {
+        const rangeCol = deck.config.rangeColumn;
+        cards = cards.filter(c => custom.rangeValues!.includes(c.data[rangeCol] ?? ""));
+      }
+      
+      // ID範囲によるフィルタ
+      if (custom.idRange && deck.config.idColumn) {
+        const idCol = deck.config.idColumn;
+        const { from, to } = custom.idRange;
+        cards = cards.filter(c => {
+          const val = c.data[idCol] ?? "";
+          // 文字列としての比較（IDが数値文字列の場合も考慮）
+          const isGte = from === "" || val >= from;
+          const isLte = to === "" || val <= to;
+          return isGte && isLte;
+        });
+      }
+    }
   }
 
-  // レビュー対象のカードをフィルタリング
-  return cards.filter((card) => {
-    if (card.fsrs.state === "New") return true;
-    if (card.fsrs.due && card.fsrs.due <= now) return true;
-    return false;
-  });
+  // 2. FSRS状態による分類
+  const dueCards = cards.filter(c => 
+    (c.fsrs.state === "Review" || c.fsrs.state === "Relearning" || c.fsrs.state === "Learning") && 
+    c.fsrs.due !== undefined && c.fsrs.due <= now
+  );
+  
+  const newCards = cards.filter(c => c.fsrs.state === "New");
+
+  // 3. 並び替え
+  if (settings.review_order === "random") {
+    dueCards.sort(() => Math.random() - 0.5);
+  } else if (settings.review_order === "difficulty") {
+    dueCards.sort((a, b) => b.fsrs.difficulty - a.fsrs.difficulty);
+  } else {
+    // デフォルト: due_date
+    dueCards.sort((a, b) => (a.fsrs.due || 0) - (b.fsrs.due || 0));
+  }
+
+  // 4. 上限適用
+  let finalDue = dueCards;
+  if (settings.reviews_per_day > 0) {
+    finalDue = dueCards.slice(0, settings.reviews_per_day);
+  }
+
+  let finalNew = newCards;
+  // カスタム学習で「新規カード上限無視」が有効な場合は制限しない
+  if (!custom?.ignoreNewCardLimit && settings.new_cards_per_day > 0) {
+    finalNew = newCards.slice(0, settings.new_cards_per_day);
+  }
+
+  // 復習カードを優先して結合
+  return [...finalDue, ...finalNew];
 }
 
 /** カードを追加または更新 */
@@ -119,7 +172,7 @@ export async function clearDatabase(): Promise<void> {
 // ---- FSRS設定 ----
 const FSRS_SETTINGS_KEY = "fsrs_settings";
 
-export const DEFAULT_FSRS_SETTINGS: import("@/types").FsrsSettings = {
+export const DEFAULT_FSRS_SETTINGS: FsrsSettings = {
   request_retention: 0.9,
   maximum_interval: 36500,
   w: [],
@@ -128,7 +181,7 @@ export const DEFAULT_FSRS_SETTINGS: import("@/types").FsrsSettings = {
   review_order: "due_date",
 };
 
-export async function getFsrsSettings(): Promise<import("@/types").FsrsSettings> {
+export async function getFsrsSettings(): Promise<FsrsSettings> {
   try {
     const raw = localStorage.getItem(FSRS_SETTINGS_KEY);
     if (!raw) return { ...DEFAULT_FSRS_SETTINGS };
@@ -138,7 +191,7 @@ export async function getFsrsSettings(): Promise<import("@/types").FsrsSettings>
   }
 }
 
-export async function saveFsrsSettings(settings: import("@/types").FsrsSettings): Promise<void> {
+export async function saveFsrsSettings(settings: FsrsSettings): Promise<void> {
   localStorage.setItem(FSRS_SETTINGS_KEY, JSON.stringify(settings));
 }
 

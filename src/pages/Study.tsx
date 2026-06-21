@@ -2,8 +2,8 @@
 // 学習ページ
 // レビューキューからカードを出題
 // ============================================================
-import { useState, useEffect, useCallback } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { useParams, Link, useLocation } from "react-router-dom";
 import {
   ArrowLeft,
   CheckCircle2,
@@ -11,16 +11,20 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StudyCard } from "@/components/StudyCard";
-import { getDeckById, getReviewCards } from "@/db";
-import type { Card, Deck } from "@/types";
+import { getDeckById, getReviewCards, getFsrsSettings } from "@/db";
+import type { Card, Deck, CustomStudyConfig } from "@/types";
 
 export function StudyPage() {
   const { deckId } = useParams<{ deckId: string }>();
+  const location = useLocation();
   const [deck, setDeck] = useState<Deck | null>(null);
   const [reviewQueue, setReviewQueue] = useState<Card[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [completed, setCompleted] = useState(false);
+
+  // クエリパラメータからカスタム学習かどうかを判定
+  const isCustom = new URLSearchParams(location.search).get("custom") === "true";
 
   const loadReviewQueue = useCallback(async () => {
     if (!deckId) return;
@@ -29,14 +33,27 @@ export function StudyPage() {
       if (!d) return;
       setDeck(d);
 
-      const reviewCards = await getReviewCards(d.id);
+      let customConfig: CustomStudyConfig | undefined;
+      if (isCustom) {
+        const saved = sessionStorage.getItem(`custom_study_${deckId}`);
+        if (saved) {
+          customConfig = JSON.parse(saved);
+        }
+      }
+
+      const settings = await getFsrsSettings();
+      const reviewCards = await getReviewCards(d.id, { 
+        settings, 
+        customStudy: customConfig 
+      });
+      
       setReviewQueue(reviewCards);
       setCurrentIndex(0);
       setCompleted(reviewCards.length === 0);
     } finally {
       setLoading(false);
     }
-  }, [deckId]);
+  }, [deckId, isCustom]);
 
   useEffect(() => {
     loadReviewQueue();
@@ -50,6 +67,16 @@ export function StudyPage() {
       setCurrentIndex(nextIndex);
     }
   }, [currentIndex, reviewQueue.length]);
+
+  // Ankiスタイルの枚数表示（残りの枚数）
+  const stats = useMemo(() => {
+    const remaining = reviewQueue.slice(currentIndex);
+    return {
+      new: remaining.filter(c => c.fsrs.state === "New").length,
+      learn: remaining.filter(c => c.fsrs.state === "Learning" || c.fsrs.state === "Relearning").length,
+      due: remaining.filter(c => c.fsrs.state === "Review").length,
+    };
+  }, [reviewQueue, currentIndex]);
 
   if (loading) {
     return (
@@ -105,17 +132,29 @@ export function StudyPage() {
           </Button>
         </Link>
         <div className="flex-1">
-          <h1 className="text-lg font-semibold">{deck.name}</h1>
-          <p className="text-xs text-muted-foreground">
-            {currentIndex + 1} / {reviewQueue.length} 枚
+          <div className="flex items-center gap-2">
+            <h1 className="text-lg font-semibold truncate max-w-[150px] sm:max-w-none">{deck.name}</h1>
+            {isCustom && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-500 border border-amber-500/20 font-medium">カスタム</span>
+            )}
+          </div>
+          <div className="flex gap-2 mt-0.5">
+            <span className="text-[11px] font-bold text-blue-500">{stats.new}</span>
+            <span className="text-[11px] font-bold text-orange-500">{stats.learn}</span>
+            <span className="text-[11px] font-bold text-green-500">{stats.due}</span>
+          </div>
+        </div>
+        <div className="text-right">
+          <p className="text-[10px] text-muted-foreground font-medium">
+            {currentIndex + 1} / {reviewQueue.length}
           </p>
         </div>
       </div>
 
       {/* 進捗バー */}
-      <div className="h-1.5 rounded-full bg-secondary">
+      <div className="h-1.5 rounded-full bg-secondary overflow-hidden">
         <div
-          className="h-1.5 rounded-full bg-primary transition-all"
+          className="h-1.5 bg-primary transition-all duration-300"
           style={{
             width: `${((currentIndex + 1) / reviewQueue.length) * 100}%`,
           }}
