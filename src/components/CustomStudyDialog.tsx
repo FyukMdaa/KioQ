@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Dialog,
@@ -11,7 +11,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { getCardsByDeck } from "@/db";
 import type { Deck, CustomStudyConfig } from "@/types";
 
 interface CustomStudyDialogProps {
@@ -22,30 +21,22 @@ interface CustomStudyDialogProps {
 
 export function CustomStudyDialog({ deck, open, onOpenChange }: CustomStudyDialogProps) {
   const navigate = useNavigate();
-  const [rangeValues, setRangeValues] = useState<string[]>([]);
-  const [availableRangeValues, setAvailableRangeValues] = useState<string[]>([]);
+  // 範囲（From/To）の状態管理に変更
+  const [rangeFrom, setRangeFrom] = useState("");
+  const [rangeTo, setRangeTo] = useState("");
   const [idFrom, setIdFrom] = useState("");
   const [idTo, setIdTo] = useState("");
   const [ignoreLimit, setIgnoreLimit] = useState(true);
 
-  useEffect(() => {
-    if (open && deck.config.rangeColumn) {
-      getCardsByDeck(deck.id).then((cards) => {
-        const values = new Set<string>();
-        const col = deck.config.rangeColumn!;
-        cards.forEach((c) => {
-          const val = c.data[col];
-          if (val) values.add(val);
-        });
-        setAvailableRangeValues(Array.from(values).sort());
-      });
-    }
-  }, [open, deck.id, deck.config.rangeColumn]);
-
   const handleStart = () => {
+    // カスタム学習の型定義（CustomStudyConfig）に合わせて、
+    // rangeValues または新しく定義する rangeRange などにマッピングしてください。
+    // ここでは一時的に既存の型を想定、あるいは適宜バックエンド/ロジック側を調整してください。
     const config: CustomStudyConfig = {
       deckId: deck.id,
-      rangeValues: rangeValues.length > 0 ? rangeValues : undefined,
+      // 既存の rangeValues が配列前提の場合、以下のように From/To の配列にするか、
+      // 型定義側を `{ from: string; to: string }` に拡張して対応してください。
+      rangeValues: (rangeFrom || rangeTo) ? [rangeFrom, rangeTo] : undefined,
       idRange: (idFrom || idTo) ? { from: idFrom, to: idTo } : undefined,
       ignoreNewCardLimit: ignoreLimit,
     };
@@ -67,28 +58,24 @@ export function CustomStudyDialog({ deck, open, onOpenChange }: CustomStudyDialo
         </DialogHeader>
 
         <div className="space-y-6 py-4">
-          {/* 範囲列フィルタ */}
+          {/* 範囲列フィルタ（開始・終了入力方式へ変更） */}
           {deck.config.rangeColumn && (
             <div className="space-y-3">
               <label className="text-sm font-medium">範囲で絞り込む ({deck.config.rangeColumn})</label>
-              <div className="max-h-32 overflow-y-auto rounded-md border p-2 space-y-2">
-                {availableRangeValues.length > 0 ? (
-                  availableRangeValues.map((val) => (
-                    <div key={val} className="flex items-center gap-2">
-                      <Checkbox
-                        id={`range-${val}`}
-                        checked={rangeValues.includes(val)}
-                        onCheckedChange={(checked) => {
-                          if (checked) setRangeValues([...rangeValues, val]);
-                          else setRangeValues(rangeValues.filter((v) => v !== val));
-                        }}
-                      />
-                      <label htmlFor={`range-${val}`} className="text-sm truncate">{val}</label>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-xs text-muted-foreground p-2">値が見つかりません</p>
-                )}
+              <div className="flex items-center gap-2">
+                <Input
+                  placeholder="開始"
+                  value={rangeFrom}
+                  onChange={(e) => setRangeFrom(e.target.value)}
+                  className="h-8 text-xs"
+                />
+                <span className="text-muted-foreground">〜</span>
+                <Input
+                  placeholder="終了"
+                  value={rangeTo}
+                  onChange={(e) => setRangeTo(e.target.value)}
+                  className="h-8 text-xs"
+                />
               </div>
             </div>
           )}
