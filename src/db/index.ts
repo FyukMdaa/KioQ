@@ -67,14 +67,24 @@ export async function getReviewCards(
   
   let cards = await db.cards.where("deckId").equals(deckId).toArray();
 
-  // 1. 範囲フィルタリング（カスタム学習用）
+    // 1. 範囲フィルタリング（カスタム学習用）
   if (custom) {
     const deck = await getDeckById(deckId);
     if (deck) {
-      // 範囲列によるフィルタ
+      // 範囲列によるフィルタ（インプットの開始〜終了による範囲比較に変更）
       if (custom.rangeValues && custom.rangeValues.length > 0 && deck.config.rangeColumn) {
         const rangeCol = deck.config.rangeColumn;
-        cards = cards.filter(c => custom.rangeValues!.includes(c.data[rangeCol] ?? ""));
+        // 配列の0番目をFrom、1番目をToとして扱う
+        const from = custom.rangeValues[0] ?? "";
+        const to = custom.rangeValues[1] ?? "";
+
+        cards = cards.filter(c => {
+          const val = c.data[rangeCol] ?? "";
+          // 文字列として比較（数値や日付文字列などの考慮）
+          const isGte = from === "" || val >= from;
+          const isLte = to === "" || val <= to;
+          return isGte && isLte;
+        });
       }
       
       // ID範囲によるフィルタ
@@ -83,7 +93,6 @@ export async function getReviewCards(
         const { from, to } = custom.idRange;
         cards = cards.filter(c => {
           const val = c.data[idCol] ?? "";
-          // 文字列としての比較（IDが数値文字列の場合も考慮）
           const isGte = from === "" || val >= from;
           const isLte = to === "" || val <= to;
           return isGte && isLte;
@@ -91,6 +100,7 @@ export async function getReviewCards(
       }
     }
   }
+
 
   // 2. FSRS状態による分類
   const dueCards = cards.filter(c => 
